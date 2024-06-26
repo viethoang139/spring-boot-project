@@ -1,0 +1,33 @@
+services:
+  spring-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysqldb:3306/spring-boot-project
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=lvh130902
+    networks:
+      - springboot-mysql-network
+  mysqldb:
+    image: mysql
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_DATABASE=spring-boot-project
+      - MYSQL_ROOT_PASSWORD=lvh130902
+    networks:
+      - springboot-mysql-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      retries: 10
+      interval: 3s
+      timeout: 30s
+networks:
+  springboot-mysql-network:
+    name: springboot-mysql-network
