@@ -15,6 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CommentController {
     private final CommentService commentService;
+
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<CommentDto> createComment(@RequestBody @Valid CommentDto commentDto,
                                                     @PathVariable Long postId){
