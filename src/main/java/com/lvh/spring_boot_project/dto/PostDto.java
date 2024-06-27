@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -22,4 +24,5 @@ public class PostDto {
     @NotEmpty(message = "content should not be empty")
     @NotBlank(message = "content should not be blank")
     private String content;
+    private List<CommentDto> commentDtoList;
 }

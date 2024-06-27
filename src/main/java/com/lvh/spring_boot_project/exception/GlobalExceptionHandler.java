@@ -30,6 +30,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(errorDetails,HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(BlogRestApiException.class)
+    public ResponseEntity<ErrorDetails> handlerBlogRestApiExceptionException(BlogRestApiException ex, WebRequest webRequest){
+        ErrorDetails errorDetails = new ErrorDetails();
+        errorDetails.setErrorStatus(HttpStatus.BAD_REQUEST);
+        errorDetails.setErrorMessage(ex.getMessage());
+        errorDetails.setTime(LocalDateTime.now());
+        errorDetails.setPath(webRequest.getDescription(false));
+        return new ResponseEntity<>(errorDetails,HttpStatus.BAD_REQUEST);
+    }
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         Map<String,String> errors = new HashMap<>();
