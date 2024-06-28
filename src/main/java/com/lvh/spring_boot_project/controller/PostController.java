@@ -1,6 +1,7 @@
 package com.lvh.spring_boot_project.controller;
 
 import com.lvh.spring_boot_project.dto.PostDto;
+import com.lvh.spring_boot_project.dto.PostResponseDto;
 import com.lvh.spring_boot_project.service.PostService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class PostController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<PostDto> createPost(@RequestBody @Valid PostDto postDto){
+    public ResponseEntity<PostResponseDto> createPost(@RequestBody @Valid PostDto postDto){
         return new ResponseEntity<>(postService.createPost(postDto), HttpStatus.CREATED);
     }
 
@@ -35,7 +36,7 @@ public class PostController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
-    public ResponseEntity<PostDto> updatePostById(@RequestBody @Valid PostDto postDto,
+    public ResponseEntity<PostResponseDto> updatePostById(@RequestBody @Valid PostDto postDto,
                                                   @PathVariable("id") Long postId){
         return ResponseEntity.ok(postService.updatePostById(postDto,postId));
     }

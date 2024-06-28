@@ -25,4 +25,5 @@ public class PostDto {
     @NotBlank(message = "content should not be blank")
     private String content;
     private List<CommentDto> comments;
+    private Long categoryId;
 }

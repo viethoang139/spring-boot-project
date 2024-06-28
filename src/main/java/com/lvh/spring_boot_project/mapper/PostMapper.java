@@ -10,6 +10,9 @@ public class PostMapper {
         postDto.setTitle(post.getTitle());
         postDto.setDescription(post.getDescription());
         postDto.setContent(post.getContent());
+        if(post.getCategory() != null){
+            postDto.setCategoryId(post.getCategory().getId());
+        }
         return postDto;
     }
 
