@@ -7,9 +7,12 @@ import com.lvh.spring_boot_project.dto.RegistrationRequest;
 import com.lvh.spring_boot_project.entity.Role;
 import com.lvh.spring_boot_project.entity.User;
 import com.lvh.spring_boot_project.repository.RoleRepository;
+import com.lvh.spring_boot_project.repository.TokenRepository;
 import com.lvh.spring_boot_project.repository.UserRepository;
 import com.lvh.spring_boot_project.security.JwtService;
 import com.lvh.spring_boot_project.service.AuthenticationService;
+import com.lvh.spring_boot_project.token.Token;
+import com.lvh.spring_boot_project.token.TokenType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final TokenRepository tokenRepository;
     @Override
     public void register(RegistrationRequest request) {
         Role role = roleRepository.findByName("ROLE_USER");
@@ -41,7 +45,31 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .roles(List.of(role))
                 .build();
-        userRepository.save(user);
+        var savedUser = userRepository.save(user);
+        var jwtToken = jwtService.generateToken(user);
+        saveUserToken(savedUser, jwtToken);
+    }
+
+    private void saveUserToken(User user, String jwtToken) {
+        var token = Token.builder()
+                .user(user)
+                .token(jwtToken)
+                .tokenType(TokenType.BEARER)
+                .expired(false)
+                .revoked(false).build();
+        tokenRepository.save(token);
+    }
+
+    private void revokeAllUserToken(User user){
+        var validUserTokens = tokenRepository.findAllByValidTokensByUser(user.getId());
+        if(validUserTokens.isEmpty()){
+            return;
+        }
+        validUserTokens.forEach(t -> {
+            t.setExpired(true);
+            t.setRevoked(true);
+        });
+        tokenRepository.saveAll(validUserTokens);
     }
 
     @Override
@@ -53,6 +81,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var user = ((User)auth.getPrincipal());
         claims.put("fullName",user.getFullName());
         var jwtToken = jwtService.generateToken(claims,user);
+        revokeAllUserToken(user);
+        saveUserToken(user,jwtToken);
         var refreshToken = jwtService.generateRefreshToken(user);
         return AuthenticationResponse.builder().accessToken(jwtToken)
                 .refreshToken(refreshToken)
@@ -70,9 +100,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         refreshToken = authHeader.substring(7);
         userEmail = jwtService.extractUsername(refreshToken);
         if(userEmail != null){
-            UserDetails userDetails = userRepository.findByEmail(userEmail).orElseThrow();
-            if(jwtService.isTokenValid(refreshToken,userDetails)){
-                var accessToken = jwtService.generateToken(userDetails);
+            var user = userRepository.findByEmail(userEmail).orElseThrow();
+            if(jwtService.isTokenValid(refreshToken,user)){
+                var accessToken = jwtService.generateToken(user);
+                revokeAllUserToken(user);
+                saveUserToken(user,refreshToken);
                 var authResponse = AuthenticationResponse.builder()
                         .accessToken(accessToken)
                         .refreshToken(refreshToken)

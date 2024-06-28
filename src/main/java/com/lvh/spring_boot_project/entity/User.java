@@ -1,4 +1,5 @@
 package com.lvh.spring_boot_project.entity;
+import com.lvh.spring_boot_project.token.Token;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -30,6 +31,9 @@ public class User implements UserDetails, Principal {
 
     @ManyToMany(fetch = FetchType.EAGER)
     private List<Role> roles;
+
+    @OneToMany(mappedBy = "user")
+    private List<Token> tokens;
     @Override
     public String getName() {
         return email;
