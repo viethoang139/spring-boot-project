@@ -1,5 +1,7 @@
 package com.lvh.spring_boot_project.controller;
 
+import com.lvh.spring_boot_project.dto.AuthenticationRequest;
+import com.lvh.spring_boot_project.dto.AuthenticationResponse;
 import com.lvh.spring_boot_project.dto.RegistrationRequest;
 import com.lvh.spring_boot_project.service.AuthenticationService;
 import jakarta.validation.Valid;
@@ -20,6 +22,11 @@ public class AuthenticationController {
     public ResponseEntity<String> register(@RequestBody @Valid RegistrationRequest request){
         authenticationService.register(request);
         return ResponseEntity.ok("Register successfully");
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<AuthenticationResponse> login(@RequestBody @Valid AuthenticationRequest request){
+        return ResponseEntity.ok(authenticationService.login(request));
     }
 
 }
