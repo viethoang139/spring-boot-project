@@ -24,5 +24,5 @@ public class PostDto {
     @NotEmpty(message = "content should not be empty")
     @NotBlank(message = "content should not be blank")
     private String content;
-    private List<CommentDto> commentDtoList;
+    private List<CommentDto> comments;
 }
