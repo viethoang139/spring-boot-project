@@ -104,7 +104,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             if(jwtService.isTokenValid(refreshToken,user)){
                 var accessToken = jwtService.generateToken(user);
                 revokeAllUserToken(user);
-                saveUserToken(user,refreshToken);
+                saveUserToken(user,accessToken);
                 var authResponse = AuthenticationResponse.builder()
                         .accessToken(accessToken)
                         .refreshToken(refreshToken)
