@@ -6,12 +6,10 @@ import com.lvh.spring_boot_project.dto.AuthenticationResponse;
 import com.lvh.spring_boot_project.dto.EmailTemplateName;
 import com.lvh.spring_boot_project.dto.RegistrationRequest;
 import com.lvh.spring_boot_project.entity.Code;
+import com.lvh.spring_boot_project.dto.Mail;
 import com.lvh.spring_boot_project.entity.Role;
 import com.lvh.spring_boot_project.entity.User;
-import com.lvh.spring_boot_project.repository.CodeRepository;
-import com.lvh.spring_boot_project.repository.RoleRepository;
-import com.lvh.spring_boot_project.repository.TokenRepository;
-import com.lvh.spring_boot_project.repository.UserRepository;
+import com.lvh.spring_boot_project.repository.*;
 import com.lvh.spring_boot_project.security.JwtService;
 import com.lvh.spring_boot_project.service.AuthenticationService;
 import com.lvh.spring_boot_project.token.Token;
@@ -20,6 +18,8 @@ import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -44,6 +44,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final TokenRepository tokenRepository;
     private final CodeRepository codeRepository;
     private final EmailService emailService;
+    private final RedisTemplate redisTemplate;
+    private final ChannelTopic topic;
     @Override
     public void register(RegistrationRequest request) throws MessagingException {
         Role role = roleRepository.findByName("ROLE_USER");
@@ -69,7 +71,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 newCode,
                 "Account activation"
         );
-
+        Mail mail = Mail.builder()
+                .email(user.getEmail())
+                .username(user.getFullName())
+                .emailTemplateName(String.valueOf(EmailTemplateName.ACTIVATE_ACCOUNT))
+                .subject("Account activation").build();
+        redisTemplate.convertAndSend(topic.getTopic(),mail.toString());
     }
 
     private String generateAndSaveActivationCode(User user) {
