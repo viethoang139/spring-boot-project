@@ -28,6 +28,7 @@ public class User implements UserDetails, Principal {
     @Column(unique = true)
     private String email;
     private String password;
+    private boolean enabled;
 
     @ManyToMany(fetch = FetchType.EAGER)
     private List<Role> roles;
@@ -73,7 +74,7 @@ public class User implements UserDetails, Principal {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
     public String getFullName(){
         return firstName + " " + lastName;

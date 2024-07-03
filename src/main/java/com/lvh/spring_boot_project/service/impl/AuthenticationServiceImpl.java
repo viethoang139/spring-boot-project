@@ -3,9 +3,12 @@ package com.lvh.spring_boot_project.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lvh.spring_boot_project.dto.AuthenticationRequest;
 import com.lvh.spring_boot_project.dto.AuthenticationResponse;
+import com.lvh.spring_boot_project.dto.EmailTemplateName;
 import com.lvh.spring_boot_project.dto.RegistrationRequest;
+import com.lvh.spring_boot_project.entity.Code;
 import com.lvh.spring_boot_project.entity.Role;
 import com.lvh.spring_boot_project.entity.User;
+import com.lvh.spring_boot_project.repository.CodeRepository;
 import com.lvh.spring_boot_project.repository.RoleRepository;
 import com.lvh.spring_boot_project.repository.TokenRepository;
 import com.lvh.spring_boot_project.repository.UserRepository;
@@ -13,16 +16,20 @@ import com.lvh.spring_boot_project.security.JwtService;
 import com.lvh.spring_boot_project.service.AuthenticationService;
 import com.lvh.spring_boot_project.token.Token;
 import com.lvh.spring_boot_project.token.TokenType;
+import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 
@@ -35,8 +42,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final TokenRepository tokenRepository;
+    private final CodeRepository codeRepository;
+    private final EmailService emailService;
     @Override
-    public void register(RegistrationRequest request) {
+    public void register(RegistrationRequest request) throws MessagingException {
         Role role = roleRepository.findByName("ROLE_USER");
         User user = User.builder()
                 .firstName(request.getFirstName())
@@ -48,6 +57,42 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var savedUser = userRepository.save(user);
         var jwtToken = jwtService.generateToken(user);
         saveUserToken(savedUser, jwtToken);
+        sendValidationEmail(user);
+    }
+
+    private void sendValidationEmail(User user) throws MessagingException {
+        String newCode = generateAndSaveActivationCode(user);
+        emailService.sendEmail(
+                user.getEmail(),
+                user.getFullName(),
+                EmailTemplateName.ACTIVATE_ACCOUNT,
+                newCode,
+                "Account activation"
+        );
+
+    }
+
+    private String generateAndSaveActivationCode(User user) {
+        String generatedCode = generateActivationCode(6);
+        var code = Code.builder()
+                .code(generatedCode)
+                .createdAt(LocalDateTime.now())
+                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .user(user)
+                .build();
+        codeRepository.save(code);
+        return generatedCode;
+    }
+
+    private String generateActivationCode(int length) {
+        String characters = "0123456789";
+        StringBuilder builder = new StringBuilder();
+        SecureRandom secureRandom = new SecureRandom();
+        for (int i = 0; i < length; i++){
+            int randomIndex = secureRandom.nextInt(characters.length());
+            builder.append(characters.charAt(randomIndex));
+        }
+        return builder.toString();
     }
 
     private void saveUserToken(User user, String jwtToken) {
@@ -112,6 +157,24 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
             }
         }
+    }
+
+    @Transactional
+    @Override
+    public void activateAccount(String code) throws MessagingException {
+        Code savedCode = codeRepository.findByCode(code)
+                .orElseThrow(() -> new RuntimeException("Invalid token"));
+        if(LocalDateTime.now().isAfter(savedCode.getExpiresAt())){
+            sendValidationEmail(savedCode.getUser());
+            throw new RuntimeException("Activation token has expired. A new token has been sent to the same email address");
+        }
+        var user = userRepository.findById(savedCode.getUser().getId())
+                .orElseThrow(() -> new UsernameNotFoundException("Can not found username"));
+
+        user.setEnabled(true);
+        userRepository.save(user);
+        savedCode.setValidatedAt(LocalDateTime.now());
+        codeRepository.save(savedCode);
     }
 
 
