@@ -1,5 +1,6 @@
 package com.lvh.spring_boot_project.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.lvh.spring_boot_project.dto.CommentDto;
 import com.lvh.spring_boot_project.entity.Comment;
 import com.lvh.spring_boot_project.entity.Post;
@@ -8,6 +9,7 @@ import com.lvh.spring_boot_project.exception.ResourceNotFoundException;
 import com.lvh.spring_boot_project.mapper.CommentMapper;
 import com.lvh.spring_boot_project.repository.CommentRepository;
 import com.lvh.spring_boot_project.repository.PostRepository;
+import com.lvh.spring_boot_project.service.CommentRedisService;
 import com.lvh.spring_boot_project.service.CommentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 public class CommentServiceImpl implements CommentService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final CommentRedisService commentRedisService;
     @Override
     public CommentDto createComment(CommentDto commentDto, Long postId) {
         Post post = postRepository.findById(postId)
@@ -46,12 +49,18 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public List<CommentDto> getAllComments(Long postId) {
+    public List<CommentDto> getAllComments(Long postId) throws JsonProcessingException {
         postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Post","ID",postId.toString()));
-        List<Comment> comments = commentRepository.findByPostId(postId);
-        return comments.stream().map(comment -> CommentMapper.mapToCommentDto(comment))
-                .collect(Collectors.toList());
+        List<CommentDto> commentDtos = commentRedisService.getAllComments(postId);
+        if(commentDtos == null){
+            List<Comment> comments = commentRepository.findByPostId(postId);
+            List<CommentDto> commentResponse = comments.stream().map(CommentMapper::mapToCommentDto)
+                    .collect(Collectors.toList());
+            commentRedisService.saveAllComments(commentResponse,postId);
+            return commentResponse;
+        }
+        return commentDtos;
     }
 
     @Override

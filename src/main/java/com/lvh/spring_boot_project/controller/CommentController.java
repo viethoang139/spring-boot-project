@@ -1,5 +1,6 @@
 package com.lvh.spring_boot_project.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.lvh.spring_boot_project.dto.CommentDto;
 import com.lvh.spring_boot_project.service.CommentService;
 import jakarta.validation.Valid;
@@ -28,7 +29,7 @@ public class CommentController {
     }
 
     @GetMapping("/posts/{postId}/comments")
-    public ResponseEntity<List<CommentDto>> getAllComments(@PathVariable Long postId){
+    public ResponseEntity<List<CommentDto>> getAllComments(@PathVariable Long postId) throws JsonProcessingException {
         return ResponseEntity.ok(commentService.getAllComments(postId));
     }
 
