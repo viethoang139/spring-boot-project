@@ -9,4 +9,10 @@ services:
     environment:
       MYSQL_DATABASE: spring-boot-project
       MYSQL_ROOT_PASSWORD: root
+  mail-dev:
+    container_name: mail-dev
+    image: maildev/maildev
+    ports:
+      - 1080:1080
+      - 1025:1025
 
