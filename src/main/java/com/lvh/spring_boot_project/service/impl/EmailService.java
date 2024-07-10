@@ -56,4 +56,26 @@ public class EmailService {
 
     }
 
+    public void sendSchedulerEmail(String fromEmail,
+                                   String toEmail,
+                                   String subject,
+                                   String username,
+                                   String body) throws MessagingException {
+        MimeMessage mimeMessage = javaMailSender.createMimeMessage();
+        MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(mimeMessage,
+                MimeMessageHelper.MULTIPART_MODE_MIXED,
+                StandardCharsets.UTF_8.toString());
+       Map<String,Object> properties = new HashMap<>();
+       properties.put("username",username);
+       properties.put("body",body);
+       Context context = new Context();
+       context.setVariables(properties);
+       mimeMessageHelper.setFrom(fromEmail);
+       mimeMessageHelper.setTo(toEmail);
+       mimeMessageHelper.setSubject(subject);
+       String template = templateEngine.process(EmailTemplateName.NOTIFICATION_EMAIL.getName(),context);
+       mimeMessageHelper.setText(template,true);
+       javaMailSender.send(mimeMessage);
+
+    }
 }
